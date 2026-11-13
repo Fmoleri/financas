@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minhas Finanças - Gestão Pessoal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class'
+    }
+  </script>
+
+  <!-- Chart.js para gráficos interativos -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icone.png">
+
+  <style>
+    @media print {
+      body { background: white !important; color: black !important; padding: 0 !important; }
+      header, .no-print, #nav-abas { display: none !important; }
+      #tela-resumo { display: block !important; }
+      .shadow-sm, .border { box-shadow: none !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen p-4 md:p-8 font-sans transition-colors duration-200">
+  <div class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- Cabeçalho Principal com Botão de Dark Mode -->
+    <header class="bg-gradient-to-r from-emerald-600 to-teal-700 dark:from-slate-800 dark:to-slate-950 text-white p-6 rounded-2xl shadow-md flex justify-between items-center transition-colors">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
+          💰
+        </div>
+        <div>
+          <h1 class="text-2xl md:text-3xl font-extrabold">Minhas Finanças</h1>
+          <p class="text-emerald-100 dark:text-slate-400 text-sm">Controle Pessoal de Receitas & Despesas</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <button id="btn-toggle-theme" onclick="window.alternarTema()" class="bg-white/20 hover:bg-white/30 text-white p-2.5 rounded-xl transition flex items-center gap-1.5 text-xs font-bold" title="Alternar Tema">
+          <span id="icone-tema">🌙</span>
+        </button>
+        <span id="badge-status" class="bg-emerald-900 dark:bg-emerald-950 text-emerald-200 text-xs px-3 py-1 rounded-full font-semibold hidden sm:inline-block">Conectando...</span>
+      </div>
+    </header>
+
+    <!-- Navegação em 3 Abas -->
+    <div id="nav-abas" class="grid grid-cols-3 gap-2 border-b border-slate-200 dark:border-slate-800 pb-2 no-print">
+      <button id="btn-aba-criar" onclick="window.trocarAba('criar')" class="py-3 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition bg-emerald-600 text-white shadow-sm">
+        <span>➕</span> Lançar
+      </button>
+      <button id="btn-aba-lista" onclick="window.trocarAba('lista')" class="py-3 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700">
+        <span>📋</span> Histórico
+      </button>
+      <button id="btn-aba-resumo" onclick="window.trocarAba('resumo')" class="py-3 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700">
+        <span>📊</span> Resumo
+      </button>
+    </div>
+
+    <!-- TELA 1: NOVO LANÇAMENTO OU EDIÇÃO -->
+    <section id="tela-criar" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4 transition-colors">
+      <h2 id="titulo-form" class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+        <span>📝</span> Cadastrar Nova Transação
+      </h2>
+
+      <form id="form-financas" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        
+        <!-- Seleção de Tipo por Radio Selecionável -->
+        <div class="md:col-span-2 space-y-1">
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Tipo de Transação *</label>
+          <div class="grid grid-cols-2 gap-3">
+            
+            <label id="label-receita" class="cursor-pointer flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold transition">
+              <input type="radio" name="tipo_transacao" value="Receita" checked class="w-4 h-4 accent-emerald-600" onchange="window.atualizarEstiloTipo('Receita')">
+              <span>🟢 Receita (Entrada)</span>
+            </label>
+
+            <label id="label-despesa" class="cursor-pointer flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold transition">
+              <input type="radio" name="tipo_transacao" value="Despesa" class="w-4 h-4 accent-rose-600" onchange="window.atualizarEstiloTipo('Despesa')">
+              <span>🔴 Despesa (Saída)</span>
+            </label>
+
+          </div>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Descrição *</label>
+          <input type="text" id="descricao" required placeholder="Ex: Ração, Vacina, Mercado" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Valor (R$) *</label>
+          <input type="number" step="0.01" id="valor" required placeholder="0.00" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Categoria *</label>
+          <select id="categoria" class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none font-medium">
+            <option value="PUCCA">🐶 PUCCA</option>
+            <option value="Alimentação">🛒 Alimentação</option>
+            <option value="Moradia">🏠 Moradia / Contas</option>
+            <option value="Transporte">🚗 Transporte</option>
+            <option value="Lazer">🎉 Lazer & Festas</option>
+            <option value="Saúde">⚕️ Saúde</option>
+            <option value="Renda">💵 Renda / Salário</option>
+            <option value="Outros">📌 Outros</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-400 uppercase mb-1">Data *</label>
+          <input type="date" id="data-transacao" required class="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none font-medium">
+        </div>
+
+        <div class="md:col-span-2 pt-2 flex gap-3">
+          <button type="submit" id="btn-salvar" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow transition">
+            Salvar Transação
+          </button>
+          <button type="button" id="btn-cancelar-edicao" onclick="window.cancelarEdicao()" class="hidden bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold px-5 py-3.5 rounded-xl transition">
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- TELA 2: HISTÓRICO DE TRANSAÇÕES -->
+    <section id="tela-lista" class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-4 hidden transition-colors">
+      <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <span>📋</span> Transações Registradas
+        </h2>
+        <button id="btn-limpar-filtros-hist" onclick="window.limparFiltrosHistorico()" class="text-xs text-emerald-600 dark:text-emerald-400 font-bold hover:underline self-start sm:self-auto">
+          Limpar Filtros
+        </button>
+      </div>
+
+      <!-- Barra de Filtros do Histórico -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700">
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Filtrar Categoria</label>
+          <select id="filtro-hist-categoria" onchange="window.aplicarFiltrosHistorico()" class="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+            <option value="TODAS">Todas as Categorias</option>
+            <option value="PUCCA">🐶 PUCCA</option>
+            <option value="Alimentação">🛒 Alimentação</option>
+            <option value="Moradia">🏠 Moradia / Contas</option>
+            <option value="Transporte">🚗 Transporte</option>
+            <option value="Lazer">🎉 Lazer & Festas</option>
+            <option value="Saúde">⚕️ Saúde</option>
+            <option value="Renda">💵 Renda / Salário</option>
+            <option value="Outros">📌 Outros</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Filtrar Mês/Ano</label>
+          <input type="month" id="filtro-hist-mes" onchange="window.aplicarFiltrosHistorico()" class="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Filtrar Dia Específico</label>
+          <input type="date" id="filtro-hist-dia" onchange="window.aplicarFiltrosHistorico()" class="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+      </div>
+
+      <div id="container-transacoes" class="space-y-3 pt-2">
+        <p class="text-center text-slate-400 py-6">Carregando dados...</p>
+      </div>
+    </section>
+
+    <!-- TELA 3: RESUMO FINANCEIRO E GRÁFICOS -->
+    <section id="tela-resumo" class="space-y-6 hidden">
+      
+      <!-- Filtro Global de Período -->
+      <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 no-print transition-colors">
+        <span class="text-sm font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+          <span>📅</span> Período dos Gráficos:
+        </span>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full sm:w-auto">
+          <input type="month" id="filtro-resumo-mes" onchange="window.aplicarFiltrosResumo()" class="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none">
+          <input type="date" id="filtro-resumo-dia" onchange="window.aplicarFiltrosResumo()" class="p-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 outline-none">
+        </div>
+      </div>
+
+      <!-- Cards de Resumo Totais -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1 transition-colors">
+          <p class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Entradas</p>
+          <h3 id="card-entradas" class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">R$ 0,00</h3>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-1 transition-colors">
+          <p class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Saídas</p>
+          <h3 id="card-saidas" class="text-2xl font-bold text-rose-600 dark:text-rose-400">R$ 0,00</h3>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-800 to-slate-900 dark:from-slate-950 dark:to-slate-900 text-white p-5 rounded-2xl shadow-sm space-y-1 border border-slate-700">
+          <p class="text-xs font-medium text-slate-300 uppercase tracking-wider">Saldo em Conta</p>
+          <h3 id="card-saldo" class="text-2xl font-black">R$ 0,00</h3>
+        </div>
+      </div>
+
+      <!-- Gráficos Interativos -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 flex flex-col items-center transition-colors">
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 w-full text-left">🌈 Entradas vs Saídas</h3>
+          <div class="relative w-full max-w-[260px] h-[260px]">
+            <canvas id="grafico-arcoiris"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 flex flex-col items-center transition-colors">
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100 w-full text-left">🍕 Despesas por Categoria</h3>
+          <div class="relative w-full max-w-[260px] h-[260px]">
+            <canvas id="grafico-pizza"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Detalhamento por Categoria -->
+      <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 transition-colors">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base font-bold text-slate-800 dark:text-slate-100">📊 Detalhamento por Categoria</h3>
+          <button onclick="window.print()" class="no-print bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold px-3 py-2 rounded-lg transition">
+            🖨️ Imprimir Relatório
+          </button>
+        </div>
+        
+        <div id="container-categorias" class="space-y-2">
+          <!-- Categorias dinâmicas -->
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- SCRIPT FIREBASE, NAVEGAÇÃO, FILTROS, DARK MODE E GRÁFICOS -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, updateDoc, onSnapshot, query, orderBy, doc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCYwV5nqMsb6xifxM2JY_ki5KAOi1Ldi_c",
+      authDomain: "financas-c93e3.firebaseapp.com",
+      projectId: "financas-c93e3",
+      storageBucket: "financas-c93e3.firebasestorage.app",
+      messagingSenderId: "625660024144",
+      appId: "1:625660024144:web:b617f340d18cca4a9d8855",
+      measurementId: "G-F07NWBP2JE"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    let dadosCompletos = [];
+    let idEmEdicao = null;
+    let chartArcoiris = null;
+    let chartPizza = null;
+
+    const badge = document.getElementById("badge-status");
+    badge.className = "bg-emerald-900 dark:bg-emerald-950 text-emerald-200 text-xs px-3 py-1 rounded-full font-semibold hidden sm:inline-block";
+    badge.innerText = "Online (Nuvem)";
+
+    document.getElementById("data-transacao").valueAsDate = new Date();
+
+    // --- GERENCIADOR DE TEMA CLARO / ESCURO ---
+    window.alternarTema = () => {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      document.getElementById('icone-tema').innerText = isDark ? '☀️' : '🌙';
+      if (dadosCompletos.length > 0) window.aplicarFiltrosResumo();
+    };
+
+    // Carrega a preferência salva no navegador
+    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+      document.getElementById('icone-tema').innerText = '☀️';
+    } else {
+      document.documentElement.classList.remove('dark');
+      document.getElementById('icone-tema').innerText = '🌙';
+    }
+
+    // --- TROCA VISUAL DO RADIO DE RECEITA/DESPESA ---
+    window.atualizarEstiloTipo = (tipoSelecionado) => {
+      const lblReceita = document.getElementById('label-receita');
+      const lblDespesa = document.getElementById('label-despesa');
+      const btnSalvar = document.getElementById('btn-salvar');
+
+      if (tipoSelecionado === 'Receita') {
+        lblReceita.className = "cursor-pointer flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold transition";
+        lblDespesa.className = "cursor-pointer flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold transition";
+        if (!idEmEdicao) btnSalvar.className = "flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl shadow transition";
+      } else {
+        lblDespesa.className = "cursor-pointer flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 font-bold transition";
+        lblReceita.className = "cursor-pointer flex items-center justify-center gap-2 p-3.5 rounded-xl border-2 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 font-bold transition";
+        if (!idEmEdicao) btnSalvar.className = "flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold py-3.5 rounded-xl shadow transition";
+      }
+    };
+
+    // --- TROCA DE ABAS ---
+    window.trocarAba = (aba) => {
+      const telas = ['criar', 'lista', 'resumo'];
+      telas.forEach(t => {
+        const el = document.getElementById(`tela-${t}`);
+        const btn = document.getElementById(`btn-aba-${t}`);
+        
+        if (t === aba) {
+          el.classList.remove('hidden');
+          btn.className = "py-3 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition bg-emerald-600 text-white shadow-sm";
+        } else {
+          el.classList.add('hidden');
+          btn.className = "py-3 px-2 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700";
+        }
+      });
+    };
+
+    // --- CARREGAR DADOS PARA EDIÇÃO ---
+    window.iniciarEdicao = (id) => {
+      const item = dadosCompletos.find(d => d.id === id);
+      if (!item) return;
+
+      idEmEdicao = id;
+      document.getElementById("descricao").value = item.descricao;
+      document.getElementById("valor").value = item.valor;
+      document.getElementById("categoria").value = item.categoria;
+      document.getElementById("data-transacao").value = item.data;
+
+      const radios = document.getElementsByName("tipo_transacao");
+      for (let r of radios) {
+        if (r.value === item.tipo) {
+          r.checked = true;
+          window.atualizarEstiloTipo(item.tipo);
+        }
+      }
+
+      document.getElementById("titulo-form").innerHTML = `<span>✏️</span> Editar Transação`;
+      const btnSalvar = document.getElementById("btn-salvar");
+      btnSalvar.innerText = "Atualizar Transação";
+      btnSalvar.className = "flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3.5 rounded-xl shadow transition";
+      document.getElementById("btn-cancelar-edicao").classList.remove("hidden");
+
+      window.trocarAba('criar');
+    };
+
+    // --- CANCELAR EDIÇÃO ---
+    window.cancelarEdicao = () => {
+      idEmEdicao = null;
+      const form = document.getElementById("form-financas");
+      form.reset();
+      document.getElementById("data-transacao").valueAsDate = new Date();
+      document.getElementById("titulo-form").innerHTML = `<span>📝</span> Cadastrar Nova Transação`;
+      
+      const btnSalvar = document.getElementById("btn-salvar");
+      btnSalvar.innerText = "Salvar Transação";
+      document.getElementById("btn-cancelar-edicao").classList.add("hidden");
+      
+      window.atualizarEstiloTipo('Receita');
+    };
+
+    // --- ADICIONAR OU ATUALIZAR TRANSAÇÃO ---
+    const form = document.getElementById("form-financas");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById("btn-salvar");
+      btn.disabled = true;
+      btn.innerText = "Salvando...";
+
+      const tipoSelecionado = document.querySelector('input[name="tipo_transacao"]:checked').value;
+      const dadosPayload = {
+        descricao: document.getElementById("descricao").value.trim(),
+        valor: parseFloat(document.getElementById("valor").value),
+        tipo: tipoSelecionado,
+        categoria: document.getElementById("categoria").value,
+        data: document.getElementById("data-transacao").value
+      };
+
+      try {
+        if (idEmEdicao) {
+          await updateDoc(doc(db, "financas_registros", idEmEdicao), dadosPayload);
+          window.cancelarEdicao();
+        } else {
+          dadosPayload.criadoEm = serverTimestamp();
+          await addDoc(collection(db, "financas_registros"), dadosPayload);
+          form.reset();
+          document.getElementById("data-transacao").valueAsDate = new Date();
+          window.atualizarEstiloTipo('Receita');
+        }
+
+        window.trocarAba('lista');
+      } catch (err) {
+        alert("Erro ao salvar alteração: " + err.message);
+      } finally {
+        btn.disabled = false;
+        if (!idEmEdicao) btn.innerText = "Salvar Transação";
+      }
+    });
+
+    // --- APAGAR TRANSAÇÃO ---
+    window.apagarTransacao = async (id) => {
+      if (confirm("Tem certeza que deseja apagar esta transação?")) {
+        await deleteDoc(doc(db, "financas_registros", id));
+      }
+    };
+
+    // --- ESCUTAR BANCO EM TEMPO REAL ---
+    const q = query(collection(db, "financas_registros"), orderBy("data", "desc"));
+    onSnapshot(q, (snapshot) => {
+      dadosCompletos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      window.aplicarFiltrosHistorico();
+      window.aplicarFiltrosResumo();
+    });
+
+    // --- FILTROS DO HISTÓRICO ---
+    window.aplicarFiltrosHistorico = () => {
+      const cat = document.getElementById("filtro-hist-categoria").value;
+      const mes = document.getElementById("filtro-hist-mes").value;
+      const dia = document.getElementById("filtro-hist-dia").value;
+
+      let filtrados = dadosCompletos;
+
+      if (cat !== "TODAS") {
+        filtrados = filtrados.filter(item => item.categoria === cat);
+      }
+
+      if (dia) {
+        filtrados = filtrados.filter(item => item.data === dia);
+      } else if (mes) {
+        filtrados = filtrados.filter(item => item.data && item.data.startsWith(mes));
+      }
+
+      renderizarLista(filtrados);
+    };
+
+    window.limparFiltrosHistorico = () => {
+      document.getElementById("filtro-hist-categoria").value = "TODAS";
+      document.getElementById("filtro-hist-mes").value = "";
+      document.getElementById("filtro-hist-dia").value = "";
+      renderizarLista(dadosCompletos);
+    };
+
+    // --- FILTROS DO RESUMO & GRÁFICOS ---
+    window.aplicarFiltrosResumo = () => {
+      const mes = document.getElementById("filtro-resumo-mes").value;
+      const dia = document.getElementById("filtro-resumo-dia").value;
+
+      let filtrados = dadosCompletos;
+
+      if (dia) {
+        filtrados = filtrados.filter(item => item.data === dia);
+      } else if (mes) {
+        filtrados = filtrados.filter(item => item.data && item.data.startsWith(mes));
+      }
+
+      renderizarResumo(filtrados);
+    };
+
+    // --- RENDERIZAR LISTA ---
+    function renderizarLista(dados) {
+      const container = document.getElementById("container-transacoes");
+      container.innerHTML = "";
+
+      if (dados.length === 0) {
+        container.innerHTML = `<p class="text-center text-slate-400 py-6">Nenhum lançamento encontrado para os filtros selecionados.</p>`;
+        return;
+      }
+
+      dados.forEach(item => {
+        const eReceita = item.tipo === "Receita";
+        const sinal = eReceita ? "+" : "-";
+        const corValor = eReceita ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400";
+        const bgTag = eReceita ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800" : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800";
+
+        const div = document.createElement("div");
+        div.className = "flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 transition-colors";
+        div.innerHTML = `
+          <div class="flex items-center gap-3">
+            <span class="text-xs px-2.5 py-1 rounded-lg border font-bold ${bgTag}">${item.tipo}</span>
+            <div>
+              <p class="font-bold text-slate-800 dark:text-slate-100 leading-tight">${item.descricao}</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500">${item.categoria} • ${item.data}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="font-extrabold ${corValor}">${sinal} R$ ${item.valor.toFixed(2)}</span>
+            <button onclick="window.iniciarEdicao('${item.id}')" title="Editar" class="text-slate-400 hover:text-amber-500 transition">✏️</button>
+            <button onclick="window.apagarTransacao('${item.id}')" title="Apagar" class="text-slate-400 hover:text-rose-500 transition">🗑️</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // --- RENDERIZAR RESUMO & ATUALIZAR GRÁFICOS ---
+    function renderizarResumo(dados) {
+      let entradas = 0;
+      let saidas = 0;
+      const categorias = {};
+
+      dados.forEach(item => {
+        const val = item.valor || 0;
+        if (item.tipo === "Receita") {
+          entradas += val;
+        } else {
+          saidas += val;
+          categorias[item.categoria] = (categorias[item.categoria] || 0) + val;
+        }
+      });
+
+      const saldo = entradas - saidas;
+      document.getElementById("card-entradas").innerText = `R$ ${entradas.toFixed(2)}`;
+      document.getElementById("card-saidas").innerText = `R$ ${saidas.toFixed(2)}`;
+      document.getElementById("card-saldo").innerText = `R$ ${saldo.toFixed(2)}`;
+
+      const catContainer = document.getElementById("container-categorias");
+      catContainer.innerHTML = "";
+
+      if (Object.keys(categorias).length === 0) {
+        catContainer.innerHTML = `<p class="text-xs text-slate-400">Nenhuma despesa para exibir no período selecionado.</p>`;
+      } else {
+        Object.entries(categorias).forEach(([cat, valor]) => {
+          const pct = saidas > 0 ? ((valor / saidas) * 100).toFixed(1) : 0;
+          const row = document.createElement("div");
+          row.className = "flex justify-between items-center p-2.5 bg-slate-50 dark:bg-slate-900 rounded-lg text-sm transition-colors";
+          row.innerHTML = `
+            <span class="font-medium text-slate-700 dark:text-slate-300">${cat}</span>
+            <span class="font-bold text-slate-800 dark:text-slate-100">R$ ${valor.toFixed(2)} <span class="text-xs font-normal text-slate-400">(${pct}%)</span></span>
+          `;
+          catContainer.appendChild(row);
+        });
+      }
+
+      atualizarGraficos(entradas, saidas, categorias);
+    }
+
+    // --- FUNÇÃO PARA RENDERIZAR GRÁFICOS ---
+    function atualizarGraficos(entradas, saidas, categorias) {
+      const isDark = document.documentElement.classList.contains('dark');
+      const corTexto = isDark ? '#f1f5f9' : '#334155';
+      const corBorda = isDark ? '#1e293b' : '#ffffff';
+
+      const ctxArcoiris = document.getElementById('grafico-arcoiris').getContext('2d');
+      if (chartArcoiris) chartArcoiris.destroy();
+
+      chartArcoiris = new Chart(ctxArcoiris, {
+        type: 'doughnut',
+        data: {
+          labels: ['Entradas (R$)', 'Saídas (R$)'],
+          datasets: [{
+            data: [entradas, saidas],
+            backgroundColor: ['#10b981', '#f43f5e'],
+            hoverOffset: 6,
+            borderWidth: 2,
+            borderColor: corBorda
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: corTexto } }
+          }
+        }
+      });
+
+      const ctxPizza = document.getElementById('grafico-pizza').getContext('2d');
+      if (chartPizza) chartPizza.destroy();
+
+      const labelsCat = Object.keys(categorias);
+      const valoresCat = Object.values(categorias);
+
+      const paletaCores = [
+        '#ec4899', '#3b82f6', '#8b5cf6', '#f59e0b', 
+        '#06b6d4', '#10b981', '#64748b', '#f97316'
+      ];
+
+      chartPizza = new Chart(ctxPizza, {
+        type: 'pie',
+        data: {
+          labels: labelsCat.length > 0 ? labelsCat : ['Sem Despesas'],
+          datasets: [{
+            data: valoresCat.length > 0 ? valoresCat : [1],
+            backgroundColor: valoresCat.length > 0 ? paletaCores.slice(0, labelsCat.length) : ['#94a3b8'],
+            hoverOffset: 6,
+            borderWidth: 2,
+            borderColor: corBorda
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: corTexto } }
+          }
+        }
+      });
+    }
+  </script>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registado com sucesso!'))
+        .catch(err => console.log('Erro ao registar Service Worker:', err));
+    });
+  }
+</script>
+</body>
+</html>
